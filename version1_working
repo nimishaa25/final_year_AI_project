@@ -1,0 +1,637 @@
+// frontend/src/App.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios'; // <--- Restored the connection to Python
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  BookOpen, Users, Upload, Download, Settings, 
+  Zap, Brain, Lock, Unlock, MessageSquare, 
+  BarChart3, Clock, Mic, FileText, Maximize2,
+  User, LogOut, Menu, X, Activity, TrendingUp,
+  Sparkles, Target, PlayCircle
+} from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+export default function App() {
+  // ============================================
+  // STATE MANAGEMENT
+  // ============================================
+  const [mode, setMode] = useState('student'); // 'student' | 'admin'
+  const [bridgeMode, setBridgeMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // --- AI & BACKEND STATE ---
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'ai', text: 'Hello! I\'m your AI Professor. I have read the syllabus. Ask me anything.' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [fileList, setFileList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
+
+  // ============================================
+  // BACKEND INTEGRATION (The "Brain")
+  // ============================================
+
+  // 1. Fetch Files on Load
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  const fetchFiles = async () => {
+    try {
+      const res = await axios.get("http://localhost:8000/files");
+      setFileList(res.data);
+    } catch (err) {
+      console.error("Backend offline");
+    }
+  };
+
+  // 2. Handle File Upload (Admin)
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadStatus("Uploading & Indexing...");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await axios.post("http://localhost:8000/upload", formData);
+      setUploadStatus("✅ Upload Complete");
+      fetchFiles(); // Refresh list
+    } catch (error) {
+      setUploadStatus("❌ Error");
+    }
+  };
+
+  // 3. Handle Chat (Student)
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+    
+    // Add User Message
+    const userMsg = inputMessage;
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setInputMessage('');
+    setLoading(true);
+
+    try {
+      // Send to Python Backend
+      const res = await axios.post("http://localhost:8000/ask", { query: userMsg });
+      
+      // Add AI Response
+      setChatMessages(prev => [...prev, { role: 'ai', text: res.data.answer }]);
+    } catch (error) {
+      setChatMessages(prev => [...prev, { role: 'ai', text: "Error: Is the backend running?" }]);
+    }
+    setLoading(false);
+  };
+
+  // ============================================
+  // MOCK DATA (Visuals only)
+  // ============================================
+  const knowledgeGraphData = [
+    { subject: 'Quantum', mastery: 85 },
+    { subject: 'Thermo', mastery: 72 },
+    { subject: 'Calculus', mastery: 45 },
+    { subject: 'Relativity', mastery: 20 },
+    { subject: 'Linear Alg', mastery: 68 }
+  ];
+
+  const studyAnalytics = [
+    { week: 'W1', hours: 12, coverage: 15 },
+    { week: 'W2', hours: 18, coverage: 32 },
+    { week: 'W3', hours: 15, coverage: 48 },
+    { week: 'W4', hours: 22, coverage: 65 },
+    { week: 'W5', hours: 20, coverage: 78 }
+  ];
+
+  const livePeers = [
+    { name: 'Tanishka Pawar', status: 'Studying Thermodynamics', avatar: 'AC' },
+    { name: 'Nimisha Bhamare', status: 'Taking Mock Exam', avatar: 'SK' },
+    { name: 'Atharva Dalvi', status: 'Reviewing Calculus', avatar: 'ML' }
+  ];
+
+  // ============================================
+  // THEME COLORS
+  // ============================================
+  const theme = {
+    primary: bridgeMode ? 'from-orange-500 to-amber-600' : 'from-blue-500 to-purple-600',
+    accent: bridgeMode ? 'border-orange-500/30' : 'border-blue-500/30',
+    glow: bridgeMode ? 'shadow-orange-500/20' : 'shadow-blue-500/20',
+    text: bridgeMode ? 'text-orange-400' : 'text-blue-400'
+  };
+
+  // ============================================
+  // ANIMATION VARIANTS
+  // ============================================
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
+  };
+
+  // ============================================
+  // RENDER: SIDEBAR
+  // ============================================
+  const Sidebar = () => (
+    <motion.aside
+      initial={false}
+      animate={{ width: sidebarOpen ? 280 : 80 }}
+      className="h-screen bg-black/40 backdrop-blur-xl border-r border-white/10 flex flex-col"
+    >
+      {/* Logo */}
+      <div className="p-6 border-b border-white/10">
+        <motion.div 
+          className="flex items-center gap-3"
+          animate={{ justifyContent: sidebarOpen ? 'flex-start' : 'center' }}
+        >
+          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${theme.primary} flex items-center justify-center`}>
+            <Brain className="w-6 h-6 text-white" />
+          </div>
+          <AnimatePresence>
+            {sidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col"
+              >
+                <h1 className="text-white font-bold text-lg">Walled Garden</h1>
+                <p className="text-xs text-gray-400">Neural EdTech</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        {[
+          { icon: MessageSquare, label: 'Ask Me Doubts', active: true },
+          { icon: BarChart3, label: 'Analytics' },
+          { icon: BookOpen, label: 'Syllabus Vault' },
+          { icon: Target, label: 'Exam Simulator' },
+          { icon: Sparkles, label: 'Flashcards' },
+          { icon: Users, label: 'Live Peers' }
+        ].map((item, i) => (
+          <motion.button
+            key={i}
+            whileHover={{ x: 5 }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              item.active 
+                ? `bg-gradient-to-r ${theme.primary} text-white` 
+                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <item.icon className="w-5 h-5 shrink-0" />
+            <AnimatePresence>
+              {sidebarOpen && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-sm font-medium"
+                >
+                  {item.label}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        ))}
+      </nav>
+
+      {/* User Profile */}
+      <div className="p-4 border-t border-white/10">
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center gap-3 p-3 rounded-lg bg-white/5 cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+            <User className="w-5 h-5 text-white" />
+          </div>
+          <AnimatePresence>
+            {sidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 min-w-0"
+              >
+                <p className="text-white text-sm font-medium truncate">Student #4729</p>
+                <p className="text-xs text-gray-400">Level 12 Researcher</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </motion.aside>
+  );
+
+  // ============================================
+  // RENDER: HEADER
+  // ============================================
+  const Header = () => (
+    <header className="h-16 bg-black/20 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-6">
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          {sidebarOpen ? <X className="w-5 h-5 text-gray-400" /> : <Menu className="w-5 h-5 text-gray-400" />}
+        </button>
+        
+        {/* Mode Switcher */}
+        <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1">
+          <button
+            onClick={() => setMode('student')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              mode === 'student' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Student Mode
+          </button>
+          <button
+            onClick={() => setMode('admin')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              mode === 'admin' 
+                ? 'bg-purple-500 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Admin Mode
+          </button>
+        </div>
+      </div>
+
+      {/* Bridge Mode Toggle */}
+      <motion.div 
+        className="flex items-center gap-3 bg-white/5 rounded-lg px-4 py-2"
+        animate={{ 
+          backgroundColor: bridgeMode ? 'rgba(249, 115, 22, 0.1)' : 'rgba(255, 255, 255, 0.05)' 
+        }}
+      >
+        <Zap className={`w-5 h-5 ${bridgeMode ? 'text-orange-400' : 'text-gray-400'}`} />
+        <span className="text-sm text-white font-medium">Bridge Mode</span>
+        <button
+          onClick={() => setBridgeMode(!bridgeMode)}
+          className={`relative w-12 h-6 rounded-full transition-colors ${
+            bridgeMode ? 'bg-orange-500' : 'bg-gray-600'
+          }`}
+        >
+          <motion.div
+            animate={{ x: bridgeMode ? 24 : 2 }}
+            className="absolute top-1 w-4 h-4 bg-white rounded-full"
+          />
+        </button>
+      </motion.div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <Settings className="w-5 h-5 text-gray-400" />
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <LogOut className="w-5 h-5 text-gray-400" />
+        </motion.button>
+      </div>
+    </header>
+  );
+
+  // ============================================
+  // RENDER: DASHBOARD CARDS
+  // ============================================
+  const BentoCard = ({ children, className = '', span = 1 }) => (
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileHover="hover"
+      className={`bg-white/5 backdrop-blur-xl rounded-2xl border ${theme.accent} ${theme.glow} shadow-2xl overflow-hidden ${className}`}
+      style={{ gridColumn: `span ${span}` }}
+    >
+      {children}
+    </motion.div>
+  );
+
+  // ============================================
+  // MAIN DASHBOARD LAYOUT
+  // ============================================
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white overflow-hidden">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        
+        <main className="flex-1 overflow-y-auto p-6">
+          <AnimatePresence mode="wait">
+            {focusMode ? (
+              // ============================================
+              // FOCUS MODE VIEW
+              // ============================================
+              <motion.div
+                key="focus"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full flex flex-col"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold">Focus Mode Active</h2>
+                  <button
+                    onClick={() => setFocusMode(false)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Exit Focus
+                  </button>
+                </div>
+                
+                <BentoCard className="flex-1 flex flex-col p-6">
+                  {/* Holographic Avatar Placeholder */}
+                  <div className="mb-6 flex justify-center">
+                    <div className={`relative w-32 h-32 rounded-full bg-gradient-to-br ${theme.primary} p-1`}>
+                      <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                        <Brain className={`w-16 h-16 ${theme.text} animate-pulse`} />
+                      </div>
+                      <div className={`absolute -inset-2 bg-gradient-to-r ${theme.primary} rounded-full blur-xl opacity-30 animate-pulse`} />
+                    </div>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-2">
+                    {chatMessages.map((msg, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-2xl px-4 py-3 rounded-2xl ${
+                          msg.role === 'user'
+                            ? `bg-gradient-to-r ${theme.primary} text-white`
+                            : 'bg-white/10 text-gray-200'
+                        }`}>
+                          {msg.text}
+                        </div>
+                      </motion.div>
+                    ))}
+                    {loading && <div className="text-green-400 animate-pulse ml-4">Thinking...</div>}
+                  </div>
+
+                  {/* Terminal Input */}
+                  <div className="bg-black/40 rounded-xl border border-green-500/30 p-4 font-mono">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-xs text-green-400 ml-2">neural_terminal_v2.4</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">$</span>
+                      <input
+                        type="text"
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="query --subject='quantum mechanics' --depth=advanced"
+                        className="flex-1 bg-transparent outline-none text-green-300 placeholder-green-700"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        className="px-4 py-1 bg-green-500/20 hover:bg-green-500/30 rounded text-green-400 text-sm transition-colors"
+                      >
+                        EXECUTE
+                      </button>
+                    </div>
+                  </div>
+                </BentoCard>
+              </motion.div>
+            ) : (
+              // ============================================
+              // BENTO GRID LAYOUT
+              // ============================================
+              <motion.div
+                key="grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-6 auto-rows-[minmax(200px,auto)] gap-4"
+              >
+                {/* Neural Core Chat - Large */}
+                <BentoCard span={4} className="row-span-2 flex flex-col p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className={`w-6 h-6 ${theme.text}`} />
+                      <h2 className="text-xl font-bold">Neural Core</h2>
+                    </div>
+                    <button
+                      onClick={() => setFocusMode(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                      Focus
+                    </button>
+                  </div>
+
+                  {/* Holographic Avatar */}
+                  <div className="mb-4 flex justify-center">
+                    <div className={`relative w-24 h-24 rounded-full bg-gradient-to-br ${theme.primary} p-1`}>
+                      <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                        <Brain className={`w-12 h-12 ${theme.text} animate-pulse`} />
+                      </div>
+                      <div className={`absolute -inset-1 bg-gradient-to-r ${theme.primary} rounded-full blur-lg opacity-20 animate-pulse`} />
+                    </div>
+                  </div>
+
+                  {/* Chat Area */}
+                  <div className="flex-1 overflow-y-auto space-y-3 mb-4 px-1">
+                    {chatMessages.slice(-3).map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-md px-4 py-2 rounded-xl text-sm ${
+                          msg.role === 'user'
+                            ? `bg-gradient-to-r ${theme.primary} text-white`
+                            : 'bg-white/10 text-gray-200'
+                        }`}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                    {loading && <div className="text-xs text-green-400 animate-pulse ml-2">Thinking...</div>}
+                  </div>
+
+                  {/* Terminal Input */}
+                  <div className="bg-black/60 rounded-lg border border-green-500/20 p-3 font-mono text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">$</span>
+                      <input
+                        type="text"
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Ask your AI Professor..."
+                        className="flex-1 bg-transparent outline-none text-green-300 placeholder-green-800"
+                      />
+                    </div>
+                  </div>
+                </BentoCard>
+
+                {/* Knowledge Graph */}
+                <BentoCard span={2} className="row-span-2 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Activity className={`w-5 h-5 ${theme.text}`} />
+                    <h3 className="font-bold">Knowledge Graph</h3>
+                  </div>
+                  <ResponsiveContainer width="100%" height="85%">
+                    <RadarChart data={knowledgeGraphData}>
+                      <PolarGrid stroke="#ffffff20" />
+                      <PolarAngleAxis dataKey="subject" stroke="#ffffff60" tick={{ fontSize: 12 }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} stroke="#ffffff40" />
+                      <Radar 
+                        name="Mastery" 
+                        dataKey="mastery" 
+                        stroke={bridgeMode ? '#f97316' : '#3b82f6'} 
+                        fill={bridgeMode ? '#f97316' : '#3b82f6'} 
+                        fillOpacity={0.3} 
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </BentoCard>
+
+                {/* Syllabus Vault (CONNECTED TO BACKEND) */}
+                <BentoCard span={2} className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className={`w-5 h-5 ${theme.text}`} />
+                    <h3 className="font-bold">Syllabus Vault</h3>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {fileList.length === 0 ? (
+                        <p className="text-xs text-gray-500">No syllabus locked.</p>
+                    ) : (
+                        fileList.map((file, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Lock className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="text-xs truncate">{file}</span>
+                            </div>
+                        </div>
+                        ))
+                    )}
+                  </div>
+                </BentoCard>
+
+                {/* Exam Simulator */}
+                <BentoCard span={2} className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock className={`w-5 h-5 ${theme.text}`} />
+                    <h3 className="font-bold">Exam Simulator</h3>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold mb-2">3d 14h</div>
+                    <div className="text-sm text-gray-400 mb-4">Next Mock: Quantum Mechanics</div>
+                    <button className={`w-full py-2 rounded-lg bg-gradient-to-r ${theme.primary} hover:opacity-90 transition-opacity font-medium text-sm`}>
+                      Start Practice
+                    </button>
+                  </div>
+                </BentoCard>
+
+                {/* Quick Actions */}
+                <BentoCard span={2} className="p-6">
+                  <h3 className="font-bold mb-4">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <button className="w-full flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm">
+                      <Sparkles className="w-4 h-4" />
+                      Generate Flashcards
+                    </button>
+                    <button className="w-full flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm">
+                      <Mic className="w-4 h-4" />
+                      Voice Transcription
+                    </button>
+                    <button className="w-full flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm">
+                      <Download className="w-4 h-4" />
+                      Export Notes
+                    </button>
+                  </div>
+                </BentoCard>
+
+                {/* Conditional: Admin Upload or Student Analytics */}
+                {mode === 'admin' ? (
+                  <BentoCard span={2} className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Upload className="w-5 h-5 text-purple-400" />
+                      <h3 className="font-bold">Admin Upload</h3>
+                    </div>
+                    <label className="border-2 border-dashed border-purple-500/30 rounded-lg p-6 text-center hover:border-purple-500/60 transition-colors cursor-pointer block">
+                      <input type="file" className="hidden" onChange={handleFileUpload} />
+                      <Upload className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400">Click to Upload PDF</p>
+                      <p className="text-xs text-green-400 mt-2">{uploadStatus}</p>
+                    </label>
+                  </BentoCard>
+                ) : (
+                  <BentoCard span={2} className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <TrendingUp className={`w-5 h-5 ${theme.text}`} />
+                      <h3 className="font-bold text-sm">Study Analytics</h3>
+                    </div>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <LineChart data={studyAnalytics}>
+                        <Line type="monotone" dataKey="hours" stroke={bridgeMode ? '#f97316' : '#3b82f6'} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </BentoCard>
+                )}
+
+                {/* Live Peers */}
+                <BentoCard span={2} className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users className={`w-5 h-5 ${theme.text}`} />
+                    <h3 className="font-bold">Live Peers</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {livePeers.map((peer, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${theme.primary} flex items-center justify-center text-xs font-bold shrink-0`}>
+                          {peer.avatar}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{peer.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{peer.status}</p>
+                        </div>
+                        <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                </BentoCard>
+
+                {/* Assignment Decoder */}
+                <BentoCard span={2} className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className={`w-5 h-5 ${theme.text}`} />
+                    <h3 className="font-bold">Assignment Decoder</h3>
+                  </div>
+                  <div className="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-white/40 transition-colors cursor-pointer">
+                    <PlayCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">Drop homework here</p>
+                  </div>
+                </BentoCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+    </div>
+  );
+}
