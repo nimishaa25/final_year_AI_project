@@ -1,0 +1,26 @@
+add this endpoint to the main file
+
+add this in main.py
+
+from fastapi import FastAPI
+from avatar.video_pipeline import generate_avatar_video
+
+app = FastAPI()
+
+@app.post("/generate-avatar")
+async def generate_avatar(request: dict):
+    text = request.get("text")
+
+    if not text:
+        return {"error": "No text provided"}
+
+    result = generate_avatar_video(text)
+
+    return {"message": "Video Generated", "path": result}
+
+add this in frontend ui code
+
+const generateAvatar = async (text) => {
+  await axios.post("http://localhost:8000/generate-avatar", { text });
+  alert("Avatar Video Generated!");
+};
