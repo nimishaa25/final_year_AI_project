@@ -1,0 +1,3 @@
+Edge TTS reuires constant internet connection
+Using coqui you get offline TTS and need not convert the file as its already in .wav
+Edge TTS is more human like voices less robotic
